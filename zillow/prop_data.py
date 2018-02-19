@@ -42,7 +42,7 @@ class zillow_property_info:
             if soup.code.string != '0':
 	        print soup.text
             try:
-                info_list.append({'Address':soup.address.string,'CSZ':soup.citystatezip.string,'zpid':soup.zpid.string,'zestimate':'{0:,}'.format(int(soup.zestimate.amount.string))})
+                info_list.append({'Address':soup.address.string,'CSZ':soup.citystatezip.string,'zpid':soup.zpid.string,'zestimate':'{0}'.format(soup.zestimate.amount.string)})
             except:
                 info_list.append({'Address':house[0],'CSZ':in_csz,'zpid':'NONE','zestimate':'NONE'})
         df = pd.DataFrame(info_list)
@@ -67,19 +67,19 @@ class zillow_property_info:
         #    data = {'zws-id':self.zws_id,'zpid':zpid, 'count':1}
 	    zpid = urllib.urlencode({'zpid':zpid})
 	    count = urllib.urlencode({'count':1})
-            url = 'http://www.zillow.com/webservice/GetDeepComps.htm?zws-id={0}&{1}&{2}'.format(self.zws_id,zpid,1)
+            url = 'http://www.zillow.com/webservice/GetDeepComps.htm?zws-id={0}&{1}&{2}'.format(self.zws_id,zpid,count)
             #soup = self.send_request(getDeepComp_url,data)
             #soup = self.send_request(getDeepComp_url,data)
-	    r = request.post(url)
+	    r = requests.post(url)
 	    soup = BeautifulSoup(r.content, 'html.parser')
             if soup.code.string != '0':
 	        print soup.text
             try:
-               comps.append("{0}; EST: {1:,}".format(soup.properties.comp.address.street.string,int(soup.properties.comp.zestimate.amount.string)))
+               comps.append("{0}; EST: {1}".format(soup.properties.comp.address.street.string,soup.properties.comp.zestimate.amount.string))
             except:
                 comps.append("None Found")
             try:
-           	details.append({'Year Built':soup.yearbuilt.string,'SQ FT':soup.finishedsqft.string,'Baths':soup.bathrooms.string,'Beds':soup.bedrooms.string,'Tax Assess':"{0:,}".format(float(soup.taxassessment.string)),'Tax Assess Year':soup.taxassessmentyear.string})
+           	details.append({'Year Built':soup.yearbuilt.string,'SQ FT':soup.finishedsqft.string,'Baths':soup.bathrooms.string,'Beds':soup.bedrooms.string,'Tax Assess':"{0}".format(soup.taxassessment.string),'Tax Assess Year':soup.taxassessmentyear.string})
             except:
 		e = sys.exc_info()[0]
 		print "Error: {0}".format(e)
@@ -93,6 +93,7 @@ class zillow_property_info:
 p = zillow_property_info()
 data_list = p.parse_data_file(data_file)
 
-#df_data = p.getSearch(data_list)
-#deets = p.getDeepComps(df_data)
 data = p.getDeepComps(p.getSearch(data_list))
+# Remove items without a match from zillow and sort by house estimate
+f_data = data[data.zestimate != 'NONE'].sort_values(['zestimate'], ascending=False)
+
